@@ -22,10 +22,6 @@ const videoSchema =new Schema(
             type:String,
             required:true,
         },
-        description:{
-            type:Number,
-            required:true,
-        },
         views:{
             type:Number,
             default: 0
