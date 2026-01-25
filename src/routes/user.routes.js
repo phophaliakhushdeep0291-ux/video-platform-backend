@@ -11,7 +11,8 @@ import {  registerUser,
     verifyEmail,
     resendEmailVerification,
     resetPasswordWithOtp,
-    forgotPassword, } from "../controllers/user.controller.js";
+    forgotPassword,
+    resendForgotPasswordOtp, } from "../controllers/user.controller.js";
 import { uploadVideo } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -60,4 +61,5 @@ router.route("/me").get(verifyJWT,getCurrentUser)
 router.route("/update-coverimage").patch(verifyJWT,upload.single("coverImage"),updateUserCoverImage)
 router.route("/forgot-password").post(forgotPassword)
 router.route("/reset-password").patch(resetPasswordWithOtp)
+router.route("/resend-otp").post(resendForgotPasswordOtp)
 export default router

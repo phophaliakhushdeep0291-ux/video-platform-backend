@@ -1,11 +1,13 @@
 import {asyncHandler} from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import {uploadOnCloudinary} from "../utils/cloudinary.js";
+import {uploadOnCloudinary,deleteFromCloudinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { sendEmail } from "../utils/sendEmail.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { validateHeaderName } from "http";
+import { isStrongPassword } from "../utils/passwordValidator.js";
 const generateAccessAndRefreshTokens= async(userId)=>{
     try {
         const user= await User.findById(userId)
@@ -38,7 +40,9 @@ const registerUser= asyncHandler(async(req,res)=>{
     ){
         throw new ApiError(400,"All field are required")
     }
-
+    if (!isStrongPassword(password)) {
+        throw new ApiError(400,"Password must be at least 8 characters long, include a capital letter, a small letter, a number, and a special character.")
+    }
     const existedUser=await User.findOne({
         $or:[{username},{email}]
     })
@@ -73,7 +77,7 @@ const registerUser= asyncHandler(async(req,res)=>{
     const verificationToken=user.generateEmailVerificationToken();
     await user.save({validateBeforeSave:false});
 
-    const verificationUrl = `http://localhost:5173/verify-email/${verificationToken}`;
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
 
     const message = `
         <h1>Welcome to VideoTube!</h1>
@@ -140,7 +144,7 @@ const resendEmailVerification=asyncHandler(async(req,res)=>{
     const verificationToken=user.generateEmailVerificationToken();
     await user.save({validateBeforeSave:false});
 
-    const verificationUrl = `http://localhost:5173/verify-email/${verificationToken}`;
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
     const {fullname}=user;
     const message = `
         <h1>Welcome to VideoTube!</h1>
@@ -288,6 +292,9 @@ const changeCurrentPassword=asyncHandler(async(req,res)=>{
     if(!isPasswordCorrect){
         throw new ApiError(400,"Invalid old password")
     }
+    if (!isStrongPassword(newPassword)) {
+        throw new ApiError(400,"Password must be at least 8 characters long, include a capital letter, a small letter, a number, and a special character.")
+    }
     user.password=newPassword
     await user.save({validateBeforeSave: false})
 
@@ -393,18 +400,21 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
 
 const forgotPassword=asyncHandler(async(req,res)=>{
     const {email} =req.body;
-    const user=await User.findById({email});
+    const user=await User.findOne({email});
     if(!user){
         throw new ApiError(404,"User not found");
     }
     const otp=user.generateForgetPasswordToken();
     await user.save({validateBeforeSave:false});
-    // const resetLink=`http://localhost:5173/verify-email/reset-password?token=${otp}&email=${email}`;
-    const message=`
-            <p>Hello ${user.fullname},</p>
-            <p>Use the following OTP to reset your password:</p>
-            <h2>${otp}</h2>
-            <p>This OTP will expire in 10 minutes.</p>
+    const resetLink=`${process.env.FRONTEND_URL}/verify-email/reset-password?token=${otp}&email=${email}`;
+    const message = `
+        <p>Hello ${user.fullname},</p>
+        <p>Use the following OTP to reset your password:</p>
+        <h1 style="font-size: 2em; font-weight: bold; color: #646cff;">${otp}</h1>
+        <p>Or click this link to reset your password (auto-fills OTP):</p>
+        <a href="${resetLink}" style="display:inline-block; padding:10px 20px; background-color:#646cff; color:white; text-decoration:none; border-radius:5px;">Reset Password</a>
+        <p>This OTP will expire in 1 minute.</p>
+        <p>If you didn’t request this, ignore this email.</p>
         `;
     try {
         await sendEmail({
@@ -423,6 +433,10 @@ const resetPasswordWithOtp=asyncHandler(async(req,res)=>{
     if(!email||!otp||!newPassword||!confirmPassword){
         throw new ApiError(400,"All fields are required");
     }
+    if(newPassword.length < 6) {
+        throw new ApiError(400, "Password must be at least 6 characters long");
+    }
+
     if(newPassword!=confirmPassword){
         throw new ApiError(400,"Password do not match");
     }
@@ -435,14 +449,66 @@ const resetPasswordWithOtp=asyncHandler(async(req,res)=>{
     if(!user.forgotPasswordToken||user.forgotPasswordToken!==hashedOTP||!user.forgotPasswordExpiry||user.forgotPasswordExpiry<Date.now()){
         throw new ApiError(400,"Invalid or expired OTP");
     }
+    if (user.otpRequests && user.otpRequests >= 5) {
+        throw new ApiError(429, "Max OTP requests reached. Try again later.");
+    }
+    if (!isStrongPassword(newPassword)) {
+        throw new ApiError(400,"Password must be at least 8 characters long, include a capital letter, a small letter, a number, and a special character.")
+    }
     user.password=newPassword;
     user.forgotPasswordToken=undefined;
     user.forgotPasswordExpiry=undefined;
+    user.otpRequests=0;
+    user.lastOtpRequest= undefined;
 
     await user.save({validateBeforeSave:false});
     res.status(200)
     .json(new ApiResponse(200,{},"Password reset successfully"))
 })
+const resendForgotPasswordOtp = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) throw new ApiError(400, "Email is required");
+
+    const user = await User.findOne({ email });
+    if (!user) throw new ApiError(404, "User not found");
+
+    const now=Date.now();
+
+    if (user.lastOtpRequest && now - user.lastOtpRequest.getTime() < 60 * 1000) {
+        throw new ApiError(429, "Please wait a minute before requesting a new OTP");
+    }
+    const otp = user.generateForgetPasswordToken();
+    user.otpRequests=(user.otpRequests||0)+1;
+    user.lastOtpRequest=now;
+    await user.save({ validateBeforeSave: false });
+
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?email=${email}&otp=${otp}`;
+
+    const message = `
+        <p>Hello ${user.fullname},</p>
+        <p>Here’s your OTP to reset your password:</p>
+        <h1 style="font-size: 2em; font-weight: bold; color: #646cff;">${otp}</h1>
+        <p>Or click this link to reset your password (auto-fills OTP):</p>
+        <a href="${resetLink}" style="display:inline-block; padding:10px 20px; background-color:#646cff; color:white; text-decoration:none; border-radius:5px;">Reset Password</a>
+        <p>This OTP will expire in 1 minute.</p>
+        <p>If you didn’t request this, ignore this email.</p>
+    `;
+
+    try {
+        await sendEmail({
+            to: email,
+            subject: "Your password reset OTP",
+            message,
+        });
+    } catch (error) {
+        console.error("Failed to send OTP:", error);
+        throw new ApiError(500, "Failed to send OTP");
+    }
+
+    res.status(200).json(new ApiResponse(200, {}, "OTP resent successfully"));
+});
+
 export {
     registerUser,
     loginUser,
@@ -457,4 +523,5 @@ export {
     resendEmailVerification,
     resetPasswordWithOtp,
     forgotPassword,
+    resendForgotPasswordOtp,
 }

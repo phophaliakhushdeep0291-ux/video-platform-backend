@@ -65,6 +65,13 @@ const userSchema =new Schema(
         },
         forgetPasswordExpiry:{
             type:Date
+        },
+        otpRequests:{
+            type:Number,
+            default:0
+        },
+        lastOtpRequest:{
+            type:Date,
         }
     },
     {timestamps:true}
