@@ -12,7 +12,9 @@ import {  registerUser,
     resendEmailVerification,
     resetPasswordWithOtp,
     forgotPassword,
-    resendForgotPasswordOtp, } from "../controllers/user.controller.js";
+    resendForgotPasswordOtp,
+    getWatchHistory,
+    getUserChannelProfile,} from "../controllers/user.controller.js";
 import { uploadVideo } from "../controllers/video.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -62,4 +64,6 @@ router.route("/update-coverimage").patch(verifyJWT,upload.single("coverImage"),u
 router.route("/forgot-password").post(forgotPassword)
 router.route("/reset-password").patch(resetPasswordWithOtp)
 router.route("/resend-otp").post(resendForgotPasswordOtp)
+router.route("/watch-history").post(verifyJWT,getWatchHistory)
+router.route("/user-profile").post(verifyJWT,getUserChannelProfile)
 export default router
