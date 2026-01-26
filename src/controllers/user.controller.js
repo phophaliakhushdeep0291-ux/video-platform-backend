@@ -9,6 +9,7 @@ import crypto from "crypto";
 import { validateHeaderName } from "http";
 import { isStrongPassword } from "../utils/passwordValidator.js";
 import { subscribe } from "diagnostics_channel";
+import mongoose from "mongoose";
 const generateAccessAndRefreshTokens= async(userId)=>{
     try {
         const user= await User.findById(userId)

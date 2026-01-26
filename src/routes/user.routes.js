@@ -55,7 +55,7 @@ router.route("/upload-Video").post(
     uploadVideo
 )
 router.route("/verify-email/:token").get(verifyEmail)
-router.route("/resend-verification").post(resendEmailVerification)
+router.route("/resend-verification").post(verifyJWT,resendEmailVerification)
 router.route("/change-password").patch(verifyJWT,changeCurrentPassword)
 router.route("/update-account").patch(verifyJWT,updateAccountDetail)
 router.route("/update-avatar").patch(verifyJWT,upload.single("avatar"),updateUserAvatar)
