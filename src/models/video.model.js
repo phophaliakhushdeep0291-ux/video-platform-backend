@@ -34,12 +34,16 @@ const videoSchema =new Schema(
             type:Schema.Types.ObjectId,
             ref:"User"
         }
+        
     },
     {
         timestamps:true,
     }
 )
-
+videoSchema.index(
+  { title: "text", description: "text" },
+  { weights: { title: 5, description: 1 } }
+);
 
 videoSchema.plugin(mongooseAggregatePaginate)
 export const Video=mongoose.model("Video",videoSchema)
