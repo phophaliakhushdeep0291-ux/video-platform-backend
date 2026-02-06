@@ -12,16 +12,17 @@ const uploadOnCloudinary = async (localFilePath, resourceType = "image") => {
         if (!localFilePath) return null;
 
         const response = await cloudinary.uploader.upload(localFilePath, {
-            resource_type: resourceType
+            resource_type: resourceType,
+            folder:resourceType==="video"?"videos":"images"
         });
 
         // console.log("File uploaded on Cloudinary:", response.secure_url);
-        fs.unlinkSync(localFilePath)
         return response;
     } catch (error) {
         console.error("Cloudinary upload error:", error);
-        if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath); // remove temp file
         return null;
+    }finally{
+        if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
     }
 }
 const deleteFromCloudinary = async (cloudinaryFileUrl, resourceType = "image") => {

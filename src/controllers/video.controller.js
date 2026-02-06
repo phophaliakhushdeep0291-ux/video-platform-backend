@@ -19,7 +19,7 @@ const uploadVideo=asyncHandler(async(req,res)=>{
     if(!localFileVideo){
         throw new ApiError(400,"Video file is required")
     }
-    const uploadedVideo=await uploadOnCloudinary(localFileVideo,"Video");
+    const uploadedVideo=await uploadOnCloudinary(localFileVideo,"video");
     if(!uploadedVideo?.secure_url){
         throw new ApiError(500,"Failed to upload");
     }
@@ -160,8 +160,12 @@ const togglePublishStatus = asyncHandler(async(req,res)=>{
         .json(new ApiResponse(200,video,"Video publish status toggled successfully"))
 })
 const getAllVideos=asyncHandler(async(req,res)=>{
+    const page=parseInt(req.query.page)||1;
+    const limit=parseInt(req.query.limit)||10;
+    
     const now= new Date();
-    const getVideo=await Video.aggregate([
+    const start =Date.now();
+    const aggregate= Video.aggregate([
         {
             $match:{isPublished:true}
         },
@@ -193,38 +197,49 @@ const getAllVideos=asyncHandler(async(req,res)=>{
                 score:-1,
             }
         },
-        {
-            $limit:10
-        },
-        {
-            $lookup:{
-                from:"users",
-                localField:"owner",
-                foreignField:"_id",
-                as:"owner"
-            }
-        },
-        {$unwind:"$owner"},
-        {
-            $project:{
-                title:1,
-                thumbnail:1,
-                views:1,
-                ageInDays:1,
-                "owner.username":1,
-                "owner.avatar":1,
-            }
-        }
+        // {
+        //     $limit:limit
+        // },
+        // {
+        //     $lookup:{
+        //         from:"users",
+        //         localField:"owner",
+        //         foreignField:"_id",
+        //         as:"owner"
+        //     }
+        // },
+        // {$unwind:"$owner"},
+        // {
+        //     $project:{
+        //         title:1,
+        //         thumbnail:1,
+        //         views:1,
+        //         ageInDays:1,
+        //         "owner.username":1,
+        //         "owner.avatar":1,
+        //     }
+        // }
     ])
+    const end=Date.now();
+    const options={page,limit};
+    const result =await Video.aggregatePaginate(aggregate,options);
     return res.status(200)
-        .json(new ApiResponse(200,getVideo,"Videos fetched successfully"))
+        .json(new ApiResponse(200,{
+            getVideo:result.docs,
+            page:result.page,
+            limit:result.limit,
+            count:result.totalDocs,
+            totalPages:result.totalPages,
+            executionTimeMs:end-start,
+        },"Videos fetched successfully"))
+            
 })
+
 export {
     uploadVideo,
     togglePublishStatus,
     deleteVideo,
     updateVideo,
     getVideoById,
-    uploadVideo,
     getAllVideos,
 }
