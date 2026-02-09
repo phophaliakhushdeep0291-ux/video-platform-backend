@@ -5,9 +5,9 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import mongoose, { mongo } from "mongoose";
 import { User } from "../models/user.model.js";
-import { use } from "react";
-import { create } from "domain";
-import { title } from "process";
+import { videoCache } from "../utils/videoCache.js";
+import { data } from "react-router-dom";
+
 
 const uploadVideo=asyncHandler(async(req,res)=>{
     const {title,description,isPublished} =  req.body
@@ -48,28 +48,44 @@ const getVideoById=asyncHandler(async(req,res)=>{
     if(!mongoose.isValidObjectId(videoId)){
         throw new ApiError(400,"Invalid video ID")
     }
+    const cacheKey=`video:${videoId}`
+
+
+    const startTime=Date.now();
+
+    const cachedVideo=videoCache.get(cacheKey);
+    if(cachedVideo){
+        console.log(`[LRU] CACHE HIT for ${cacheKey}`)
+        console.log(`[PERF] Response time: ${Date.now()-startTime} ms (CACHE)`)
+
+        return res.status(200)
+            .json(new ApiResponse(200,cachedVideo,"Video fetched from cache"))
+    }
+
+    console.log(`[LRU] CACHE MISS for ${cacheKey}`);
+
     const videoagg=await Video.aggregate([
-        {$match:{_id:mongoose.Types.ObjectId(videoId)}},
-        {
-            $lookup:{
-                from:"users",
-                localField:"owner",
-                foreignField:"_id",
-                as:"ownerDetails"
-            }
-        },
-        {$unwind:"$ownerDetails"},
-        {$match:{
-            $or:[
-                {isPublished:true},
-                {"ownerDetails._id":mongoose.Types.ObjectId(req.user?._id)}
-            ]
-        }},
-        {
-            $set:{
-                views:{$add:["$views",1]}
-            }
-        },
+        {$match:{_id:new mongoose.Types.ObjectId(videoId)}},
+        // {
+        //     $lookup:{
+        //         from:"users",
+        //         localField:"owner",
+        //         foreignField:"_id",
+        //         as:"ownerDetails"
+        //     }
+        // },
+        // {$unwind:"$ownerDetails"},
+        // {$match:{
+        //     $or:[
+        //         {isPublished:true},
+        //         {"ownerDetails._id":new mongoose.Types.ObjectId(req.user?._id)}
+        //     ]
+        // }},
+        // {
+        //     $set:{
+        //         views:{$add:["$views",1]}
+        //     }
+        // },
         {
             $project:{
                 title:1,
@@ -80,10 +96,10 @@ const getVideoById=asyncHandler(async(req,res)=>{
                 views:1,
                 createdAt:1,
                 updatedAt:1,
-                "owner._id":"$ownerDetails._id",
-                "owner.username":"$ownerDetails.username",
-                "owner.fullname":"$ownerDetails.fullname",
-                "owner.avatar":"$ownerDetails.avatar"
+                // "owner._id":"$ownerDetails._id",
+                // "owner.username":"$ownerDetails.username",
+                // "owner.fullname":"$ownerDetails.fullname",
+                // "owner.avatar":"$ownerDetails.avatar"
             }
         }
     ]);
@@ -96,6 +112,12 @@ const getVideoById=asyncHandler(async(req,res)=>{
         {_id: videoId},
         {$inc:{views:1}}
     )
+
+    videoCache.set(cacheKey,video);
+
+    console.log(`[LRU] Stored ${cacheKey} in cache`);
+    console.log(`[PERF] Response time: ${Date.now()-startTime} ms (DB)`);
+
     if(req.user){
         await User.findByIdAndUpdate(
             req.user._id,
