@@ -16,9 +16,9 @@ const uploadVideoAndThumbnail = uploadVideoFiles.fields([
 ]);
 router.post("/upload", verifyJWT, uploadVideoAndThumbnail, uploadVideo);
 router.route("/update/:videoId").patch(verifyJWT, updateVideo);
-
+router.route("/getvideos").get(getAllVideos);
 router.route("/toggle/:videoId/publish").patch(togglePublishStatus);
 router.route("/delete/:videoId").delete(verifyJWT,deleteVideo);
 router.route("/:videoId").get(getVideoById);
-router.route("/getvideos").get(getAllVideos);
+
 export default router
