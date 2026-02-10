@@ -487,8 +487,8 @@ curl http://localhost:8000/api/v1/videos/getvideos?page=1&limit=5
 **Khushdeep Phophalia**
 
 - GitHub: [@phophaliakhushdeep0291-ux](https://github.com/phophaliakhushdeep0291-ux)
-- LinkedIn: [Your LinkedIn]
-- Email: [Your Email]
+- LinkedIn: [@khushdeep-phophalia](https://linkedin.com/in/khushdeep-phophalia)
+- Email: [@phophaliakhushdeep0291](phophaliakhushdeep0291@gmail.com)
 
 ---
 
