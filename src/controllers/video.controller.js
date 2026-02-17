@@ -6,7 +6,6 @@ import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js
 import mongoose, { mongo } from "mongoose";
 import { User } from "../models/user.model.js";
 import { videoCache } from "../utils/videoCache.js";
-import { data } from "react-router-dom";
 
 
 const uploadVideo=asyncHandler(async(req,res)=>{
