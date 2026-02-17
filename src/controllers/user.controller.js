@@ -52,7 +52,7 @@ const registerUser= asyncHandler(async(req,res)=>{
         throw new ApiError(409,"this user or email already exist")
     }
     //console.log(req.files);
-    const avatarLocalPath = req.files?.avatar[0]?.path;
+    const avatarLocalPath = req.files?.avatar?.[0]?.path;
     //const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
     let coverImageLocalPath;
@@ -135,41 +135,42 @@ const verifyEmail=asyncHandler(async(req,res)=>{
     .status(200)
     .json(new ApiResponse(200,{},"Email verified successfully"))
 })
-const resendEmailVerification=asyncHandler(async(req,res)=>{
-    const user=await User.findById(req.user._id);
-    if(!user){
-        throw new ApiError(404,"User not found");
-    }
-    if(user.isEmailVerified){
-        throw new ApiError(400,"Email arleady verified");
-    }
-    const verificationToken=user.generateEmailVerificationToken();
-    await user.save({validateBeforeSave:false});
+const resendEmailVerification = asyncHandler(async(req, res) => {
+    const { email } = req.body  // ← add this
+
+    if(!email) throw new ApiError(400, "Email is required")
+
+    const user = await User.findOne({ email })  // ← change this
+    if(!user) throw new ApiError(404, "User not found")
+
+    if(user.isEmailVerified) throw new ApiError(400, "Email already verified")
+
+    const verificationToken = user.generateEmailVerificationToken();
+    await user.save({ validateBeforeSave: false });
 
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-    const {fullname}=user;
+    const { fullname } = user;
     const message = `
         <h1>Welcome to VideoTube!</h1>
         <p>Hi ${fullname},</p>
-        <p>Thank you for registering! Please verify your email by clicking the link below:</p>
+        <p>Please verify your email by clicking the link below:</p>
         <a href="${verificationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #646cff; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
         <p>Or copy this link: ${verificationUrl}</p>
         <p>This link will expire in 24 hours.</p>
-        <p>If you didn't create this account, please ignore this email.</p>
     `;
     try {
         await sendEmail({
-           to:user.email,
-           subject:"Email Verification - VideoTube",
+           to: user.email,
+           subject: "Email Verification - VideoTube",
            message
         });
     } catch (error) {
-        user.emailVerificationToken=undefined;
-        user.emailVerificationExpiry=undefined;
-        await user.save({validateBeforeSave:false});
-        console.error("Failed to send verification email:",error);
+        user.emailVerificationToken = undefined;
+        user.emailVerificationExpiry = undefined;
+        await user.save({ validateBeforeSave: false });
+        console.error("Failed to send verification email:", error);
     }
-    return res.status(200).json(new ApiResponse(200,{},"Verification email resent successfully"))
+    return res.status(200).json(new ApiResponse(200, {}, "Verification email resent successfully"))
 })
 
 const loginUser= asyncHandler(async (req,res)=>{
