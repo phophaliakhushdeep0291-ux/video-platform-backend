@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser"
 const app= express()
 console.log("CORS ORIGIN:", process.env.CORS_ORIGIN) // add this
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: process.env.CORS_ORIGIN || "https://video-platform-frontend-seven.vercel.app",
     credentials : true
 })) 
 
