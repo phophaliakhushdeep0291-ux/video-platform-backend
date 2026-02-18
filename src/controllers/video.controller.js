@@ -65,26 +65,26 @@ const getVideoById=asyncHandler(async(req,res)=>{
 
     const videoagg=await Video.aggregate([
         {$match:{_id:new mongoose.Types.ObjectId(videoId)}},
-        // {
-        //     $lookup:{
-        //         from:"users",
-        //         localField:"owner",
-        //         foreignField:"_id",
-        //         as:"ownerDetails"
-        //     }
-        // },
-        // {$unwind:"$ownerDetails"},
-        // {$match:{
-        //     $or:[
-        //         {isPublished:true},
-        //         {"ownerDetails._id":new mongoose.Types.ObjectId(req.user?._id)}
-        //     ]
-        // }},
-        // {
-        //     $set:{
-        //         views:{$add:["$views",1]}
-        //     }
-        // },
+        {
+            $lookup:{
+                from:"users",
+                localField:"owner",
+                foreignField:"_id",
+                as:"ownerDetails"
+            }
+        },
+        {$unwind:"$ownerDetails"},
+        {$match:{
+            $or:[
+                {isPublished:true},
+                {"ownerDetails._id":new mongoose.Types.ObjectId(req.user?._id)}
+            ]
+        }},
+        {
+            $set:{
+                views:{$add:["$views",1]}
+            }
+        },
         {
             $project:{
                 title:1,
@@ -95,10 +95,10 @@ const getVideoById=asyncHandler(async(req,res)=>{
                 views:1,
                 createdAt:1,
                 updatedAt:1,
-                // "owner._id":"$ownerDetails._id",
-                // "owner.username":"$ownerDetails.username",
-                // "owner.fullname":"$ownerDetails.fullname",
-                // "owner.avatar":"$ownerDetails.avatar"
+                "owner._id":"$ownerDetails._id",
+                "owner.username":"$ownerDetails.username",
+                "owner.fullname":"$ownerDetails.fullname",
+                "owner.avatar":"$ownerDetails.avatar"
             }
         }
     ]);
@@ -218,28 +218,28 @@ const getAllVideos=asyncHandler(async(req,res)=>{
                 score:-1,
             }
         },
-        // {
-        //     $limit:limit
-        // },
-        // {
-        //     $lookup:{
-        //         from:"users",
-        //         localField:"owner",
-        //         foreignField:"_id",
-        //         as:"owner"
-        //     }
-        // },
-        // {$unwind:"$owner"},
-        // {
-        //     $project:{
-        //         title:1,
-        //         thumbnail:1,
-        //         views:1,
-        //         ageInDays:1,
-        //         "owner.username":1,
-        //         "owner.avatar":1,
-        //     }
-        // }
+        {
+            $limit:limit
+        },
+        {
+            $lookup:{
+                from:"users",
+                localField:"owner",
+                foreignField:"_id",
+                as:"owner"
+            }
+        },
+        {$unwind:"$owner"},
+        {
+            $project:{
+                title:1,
+                thumbnail:1,
+                views:1,
+                ageInDays:1,
+                "owner.username":1,
+                "owner.avatar":1,
+            }
+        }
     ])
     const end=Date.now();
     const options={page,limit};
