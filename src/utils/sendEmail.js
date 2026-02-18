@@ -2,15 +2,10 @@ import nodemailer from "nodemailer";
 
 export const sendEmail = async (options) => {
     try {
-        console.log("Email config:", {
-            host: process.env.EMAIL_HOST,
-            port: process.env.EMAIL_PORT,
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS ? "loaded" : "MISSING"
-        });
         const transporter = nodemailer.createTransport({
             host: process.env.EMAIL_HOST,
-            port: process.env.EMAIL_PORT,
+            port: process.env.EMAIL_PORT||465,
+            secure: true,
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
