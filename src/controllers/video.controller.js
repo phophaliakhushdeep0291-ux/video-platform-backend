@@ -246,7 +246,7 @@ const getAllVideos=asyncHandler(async(req,res)=>{
     const result =await Video.aggregatePaginate(aggregate,options);
     return res.status(200)
         .json(new ApiResponse(200,{
-            getVideo:result.docs,
+            docs:result.docs,
             page:result.page,
             limit:result.limit,
             count:result.totalDocs,
