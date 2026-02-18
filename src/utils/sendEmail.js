@@ -1,24 +1,15 @@
-import nodemailer from "nodemailer";
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendEmail = async (options) => {
     try {
-        const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: process.env.EMAIL_PORT||465,
-            secure: true,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-    
-        const mailOptions = {
-            from: `VideoTube Support <${process.env.EMAIL_USER}>`,
+        await resend.emails.send({
+            from: 'VideoTube <onboarding@resend.dev>',
             to: options.to,
             subject: options.subject,
-            html: options.message, 
-        };
-        await transporter.sendMail(mailOptions);
+            html: options.message,
+        });
     } catch (error) {
         console.error("Email error:", error);
         throw error;
