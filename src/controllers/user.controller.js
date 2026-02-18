@@ -74,7 +74,7 @@ const registerUser= asyncHandler(async(req,res)=>{
         email,
         password,
         username: username.toLowerCase(),
-        isEmailVerified:false
+        isEmailVerified:true
     })
     const verificationToken=user.generateEmailVerificationToken();
     await user.save({validateBeforeSave:false});
